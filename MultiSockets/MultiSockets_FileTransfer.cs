@@ -47,7 +47,7 @@ namespace MultiSockets
                 return "127.0.0.1";
             }
 
-            private void DataInsert(byte[] p_Data, byte[] b)
+            private void DataInsert(byte[] byteData, byte[] b)
             {
                 // 수신받은 데이터(바이트배열) 복사 위치
                 int i_Packagelen = 0;

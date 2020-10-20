@@ -12,17 +12,17 @@ namespace SocketChatandFile
 {
     public partial class frm_Alarm : Form
     {
-        public frm_Alarm(string p_sender, string p_fileName)
+        public frm_Alarm(string sender, string fileName)
         {
             InitializeComponent();
             this.TopMost = true;
             this.StartPosition = FormStartPosition.CenterScreen;
 
-            string sMsg = string.Empty;
-            sMsg = " " + p_sender + " 님이 파일을 전송 " + Environment.NewLine +
+            string msg = string.Empty;
+            msg = " " + sender + " 님이 파일을 전송 " + Environment.NewLine +
                    " 했습니다." + Environment.NewLine + " 수신 하시겠습니까?";
-            textBox1.Text = sMsg;
-            textBox2.Text = " " + p_fileName;
+            textBox1.Text = msg;
+            textBox2.Text = " " + fileName;
         }
 
         private bool AcceptFile()

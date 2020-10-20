@@ -20,35 +20,35 @@ namespace SocketChatandFile
         private static extern void mouse_event(uint dwFlags, uint dx, uint dy, uint dwData, uint dwDetail);
         private const uint L_down = 0x0002;
 
-        private static MultiSockets_FileTransfer.FileSocketServer o_FileServer = new MultiSockets_FileTransfer.FileSocketServer();
-        private static MultiSockets_Server.ServerNode o_Server = new MultiSockets_Server.ServerNode();  // 서버 객체
-        private static MultiSockets_Client.ClientNode o_Client = new MultiSockets_Client.ClientNode();  // 클라이언트 객체        
-        private static SocketMSG o_MSG = new SocketMSG();       // 메세지
-        private static bool b_isServer = false;                 // 서버/클라이언트 구분 true : Server, False : Client
-        private static bool b_isConnect = false;                // 서버 연결 확인 플래그      
-        private static string CLIENT_IP = string.Empty;
-        private static string s_selfIP = string.Empty;
-        private int i_PacketCnt = 0;
+        private static MultiSockets_FileTransfer.FileSocketServer clsFileServer = new MultiSockets_FileTransfer.FileSocketServer();
+        private static MultiSockets_Server.ServerNode clsServer = new MultiSockets_Server.ServerNode();  // 서버 객체
+        private static MultiSockets_Client.ClientNode clsClient = new MultiSockets_Client.ClientNode();  // 클라이언트 객체        
+        private static SocketMSG clsMSG = new SocketMSG();       // 메세지
+        private static bool isServer = false;                 // 서버/클라이언트 구분 true : Server, False : Client
+        private static bool isConnect = false;                // 서버 연결 확인 플래그      
+        private static string clientIP = string.Empty;
+        private static string myIP = string.Empty;
+        private int packetCnt = 0;
 
         public frm_Main()
         {
             InitializeComponent();
             FindIPv4();
-            o_Server.AppendNodeMsg += new MultiSockets_Server.ServerNode.AppendServerDelegate(this.AppendNodeMsg);
+            clsServer.AppendNodeMsg += new MultiSockets_Server.ServerNode.AppendServerDelegate(this.AppendNodeMsg);
         }
 
         private void btn_Create_Click(object sender, EventArgs e)
         {
-            bool b_IPValid = ValidateIPv4(txt_IPaddr.Text);
-            bool b_PortValid = CheckPort();
-            o_Server.BoardCast += new MultiSockets_Server.ServerNode.AppendServerDelegate(this.BroadCastMsg);
-            o_Server.ExitNode += new MultiSockets_Server.ServerNode.AppendServerDelegate(this.ExitNodeMsg);
-            o_Server.Append_DATA += new MultiSockets_Server.ServerNode.AppendDataDelegate(this.Received_DATA);
-            o_Server.Append_DataOnly += new MultiSockets_Server.ServerNode.AppendDataOnly(this.Received_DataOnly);
-            o_FileServer.Listen();
+            bool isIPValid = ValidateIPv4(txt_IPaddr.Text);
+            bool isPortValid = CheckPort();
+            clsServer.BoardCast += new MultiSockets_Server.ServerNode.AppendServerDelegate(this.BroadCastMsg);
+            clsServer.ExitNode += new MultiSockets_Server.ServerNode.AppendServerDelegate(this.ExitNodeMsg);
+            clsServer.Append_DATA += new MultiSockets_Server.ServerNode.AppendDataDelegate(this.Received_DATA);
+            clsServer.Append_DataOnly += new MultiSockets_Server.ServerNode.AppendDataOnly(this.Received_DataOnly);
+            clsFileServer.Listen();
 
             //  아이피, 포트 확인
-            if (!b_IPValid || !b_PortValid)
+            if (!isIPValid || !isPortValid)
             {
                 MessageBox.Show("IP주소 또는 Port를 확인해주세요.");
                 return;
@@ -57,14 +57,14 @@ namespace SocketChatandFile
             // 서버 시작
             try
             {
-                string s_DATETIME = "[" + DateTime.Now.ToString("yy/MM/dd HH:mm:ss") + "] ";
-                o_Server.StartServer(txt_IPaddr.Text, int.Parse(txt_Port.Text));
-                txt_TextBox.Text = txt_TextBox.Text + Environment.NewLine + s_DATETIME + "Server Open";
+                string currentTime = "[" + DateTime.Now.ToString("yy/MM/dd HH:mm:ss") + "] ";
+                clsServer.StartServer(txt_IPaddr.Text, int.Parse(txt_Port.Text));
+                txt_TextBox.Text = txt_TextBox.Text + Environment.NewLine + currentTime + "Server Open";
                 btn_Connect.Enabled = false;
                 btn_Disconnect.Enabled = false;
                 btn_Create.BackColor = Color.Lime;
-                b_isServer = true;
-                s_selfIP = txt_IPaddr.Text + ":" + txt_Port.Text;
+                isServer = true;
+                myIP = txt_IPaddr.Text + ":" + txt_Port.Text;
                 listBox1.Items.Add(txt_IPaddr.Text + ":" + txt_Port.Text + " (Host)");
             }
             catch (Exception ex)
@@ -76,25 +76,25 @@ namespace SocketChatandFile
         // 리스트에 담기 -> 타이머체커로 메세지 보내기(서버,클라)
         private void CheckConnectiList()
         {
-            string sMsg = string.Empty;
+            string msg = string.Empty;
             for (int i = 1; i <= listBox1.Items.Count; i++)
             {
                 if (listBox1.Items.Count == i)
                 {
-                    sMsg += listBox1.Items[i - 1].ToString();
+                    msg += listBox1.Items[i - 1].ToString();
                 }
                 else
-                    sMsg += listBox1.Items[i - 1] + "/";
+                    msg += listBox1.Items[i - 1] + "/";
             }
-            o_MSG.sHeader = SocketMSG.MESSAGE_TYPE.CONNECT_LIST;
-            o_MSG.sMsg = sMsg;
-            o_Server.MessageSend(o_MSG);
+            clsMSG.sHeader = SocketMSG.MESSAGE_TYPE.CONNECT_LIST;
+            clsMSG.sMsg = msg;
+            clsServer.MessageSend(clsMSG);
         }
 
         private void btn_Connect_Click(object sender, EventArgs e)
         {
-            bool b_IPValid = ValidateIPv4(txt_IPaddr.Text);
-            bool b_PortValid;
+            bool isIPValid = ValidateIPv4(txt_IPaddr.Text);
+            bool isPortValid;
 
             if (txt_Port.Text == "")
             {
@@ -103,11 +103,11 @@ namespace SocketChatandFile
             }
             // 포트 범위 이외의 포트번호 확인
             if ((double.Parse(txt_Port.Text) < 65536 && int.Parse(txt_Port.Text) > 0))
-                b_PortValid = true;
+                isPortValid = true;
             else
-                b_PortValid = false;
+                isPortValid = false;
 
-            if (!b_IPValid || !b_PortValid)
+            if (!isIPValid || !isPortValid)
             {
                 MessageBox.Show("IP주소 또는 Port를 확인해주세요.");
                 return;
@@ -116,57 +116,57 @@ namespace SocketChatandFile
             // 서버에 접속
             try
             {
-                o_Client.Append_Msg += new MultiSockets_Client.ClientNode.AppendClientDelegate(this.AppendNodeMsg);
-                o_Client.Append_SYSTEM_MSG += new MultiSockets_Client.ClientNode.AppendClientDelegate(this.SYSTEM_MSG);
-                o_Client.Append_NODE += new MultiSockets_Client.ClientNode.AppendClientDelegate(this.CONNECTED_LIST);
-                o_Client.Append_DATA += new MultiSockets_Client.ClientNode.AppendDataDelegate(this.Received_DATA);
-                o_Client.Append_DataOnly += new MultiSockets_Client.ClientNode.AppendDataOnly(this.Received_DataOnly);
-                o_Client.StartClient(txt_IPaddr.Text, int.Parse(txt_Port.Text));
+                clsClient.Append_Msg += new MultiSockets_Client.ClientNode.AppendClientDelegate(this.AppendNodeMsg);
+                clsClient.Append_SYSTEM_MSG += new MultiSockets_Client.ClientNode.AppendClientDelegate(this.SYSTEM_MSG);
+                clsClient.Append_NODE += new MultiSockets_Client.ClientNode.AppendClientDelegate(this.CONNECTED_LIST);
+                clsClient.Append_DATA += new MultiSockets_Client.ClientNode.AppendDataDelegate(this.Received_DATA);
+                clsClient.Append_DataOnly += new MultiSockets_Client.ClientNode.AppendDataOnly(this.Received_DataOnly);
+                clsClient.StartClient(txt_IPaddr.Text, int.Parse(txt_Port.Text));
                 btn_Create.Enabled = false;
                 btn_Connect.Enabled = false;
-                b_isConnect = true;
+                isConnect = true;
             }
             catch (Exception ex)
             {
                 MessageBox.Show("연결에 실패 했습니다. \n" + ex.Message);
-                o_Client.Append_Msg -= new MultiSockets_Client.ClientNode.AppendClientDelegate(this.AppendNodeMsg);
-                o_Client.Append_SYSTEM_MSG -= new MultiSockets_Client.ClientNode.AppendClientDelegate(this.SYSTEM_MSG);
-                o_Client.Append_NODE -= new MultiSockets_Client.ClientNode.AppendClientDelegate(this.CONNECTED_LIST);
-                o_Client.Append_DATA -= new MultiSockets_Client.ClientNode.AppendDataDelegate(this.Received_DATA);
-                o_Client.Append_DataOnly -= new MultiSockets_Client.ClientNode.AppendDataOnly(this.Received_DataOnly);
+                clsClient.Append_Msg -= new MultiSockets_Client.ClientNode.AppendClientDelegate(this.AppendNodeMsg);
+                clsClient.Append_SYSTEM_MSG -= new MultiSockets_Client.ClientNode.AppendClientDelegate(this.SYSTEM_MSG);
+                clsClient.Append_NODE -= new MultiSockets_Client.ClientNode.AppendClientDelegate(this.CONNECTED_LIST);
+                clsClient.Append_DATA -= new MultiSockets_Client.ClientNode.AppendDataDelegate(this.Received_DATA);
+                clsClient.Append_DataOnly -= new MultiSockets_Client.ClientNode.AppendDataOnly(this.Received_DataOnly);
                 btn_Create.Enabled = true;
                 btn_Connect.Enabled = true;
-                b_isConnect = false;
+                isConnect = false;
             }
         }
         private delegate void ReceivedDataOnly();
         /// <summary>
         /// 파일 수신
         /// </summary>
-        /// <param name="p_Data"></param>
-        private void Received_DataOnly(byte[] p_Data)
+        /// <param name="pData"></param>
+        private void Received_DataOnly(byte[] pData)
         {
             Invoke(new ReceivedDataOnly(delegate
             {
                 // 수신받은 데이터(바이트배열) 복사 위치
-                int i_Packagelen = 0;
-                if (i_PacketCnt > 0)
-                    i_Packagelen = (i_PacketCnt * 1024);
+                int packageLength = 0;
+                if (packetCnt > 0)
+                    packageLength = (packetCnt * 1024);
 
                 // 마지막 패킷일 경우 마지막으로 받은 패킷 크기 지정
                 if (2 > ReceivedFile._PacketCnt)
-                    Array.Copy(p_Data, 0, ReceivedFile._Data, i_Packagelen, ReceivedFile._RemainPacket);
+                    Array.Copy(pData, 0, ReceivedFile._Data, packageLength, ReceivedFile._RemainPacket);
                 else
-                    Array.Copy(p_Data, 0, ReceivedFile._Data, i_Packagelen, p_Data.Length);
+                    Array.Copy(pData, 0, ReceivedFile._Data, packageLength, pData.Length);
 
                 // 받은 패킷 카운트 증가, 남은 패킷 수 계산
-                i_PacketCnt += 1;
+                packetCnt += 1;
                 ReceivedFile._PacketCnt -= 1;
 
                 // 파일 전송 완료
                 if (1 > ReceivedFile._PacketCnt)
                 {
-                    i_PacketCnt = 0;
+                    packetCnt = 0;
                     frm_Alarm frm_Alarm = new frm_Alarm(ReceivedFile._sender, ReceivedFile._FileName);
                     frm_Alarm.Show();
                 }
@@ -174,15 +174,15 @@ namespace SocketChatandFile
         }
 
         private delegate void ReceivedData();
-        private void Received_DATA(string p_Sender, string[] p_Msg)
+        private void Received_DATA(string sender, string[] msg)
         {
             Invoke(new ReceivedData(delegate
             {
-                if (p_Msg[0] == "DATA")
+                if (msg[0] == "DATA")
                 {
-                    var fileInfo = p_Msg[3].Split('/');
-                    ReceivedFile._sender = p_Msg[1];
-                    ReceivedFile._Receiver = p_Msg[2];
+                    var fileInfo = msg[3].Split('/');
+                    ReceivedFile._sender = msg[1];
+                    ReceivedFile._Receiver = msg[2];
                     ReceivedFile._FileName = fileInfo[0];
                     ReceivedFile._Size = int.Parse(fileInfo[1]);
                     ReceivedFile._PacketCnt = int.Parse(fileInfo[2]);
@@ -193,21 +193,20 @@ namespace SocketChatandFile
                     StoredPackage SPakage = new StoredPackage(ReceivedFile._sender,
                                             ReceivedFile._Receiver, ReceivedFile._FileName, ReceivedFile._Size);
 
-
-                    if (b_isServer)
+                    if (isServer)
                     {
-                        if (ReceivedFile._Receiver == s_selfIP)
+                        if (ReceivedFile._Receiver == myIP)
                         {
                             // 서버가 수신인
-                            frm_Alarm frm_Alarm = new frm_Alarm(ReceivedFile._sender, ReceivedFile._FileName);
-                            frm_Alarm.Show();
+                            frm_Alarm frmAlarm = new frm_Alarm(ReceivedFile._sender, ReceivedFile._FileName);
+                            frmAlarm.Show();
                         }
                         else
                         {
                             // 클라이언트 -> 서버 -> 수신인
-                            o_MSG.sSender = ReceivedFile._sender;
-                            o_MSG.sReceiver = ReceivedFile._Receiver;
-                            o_MSG.sHeader = SocketMSG.MESSAGE_TYPE.DATA;
+                            clsMSG.sSender = ReceivedFile._sender;
+                            clsMSG.sReceiver = ReceivedFile._Receiver;
+                            clsMSG.sHeader = SocketMSG.MESSAGE_TYPE.DATA;
                             FileStream fileStr = new FileStream(ReceivedFile._FileName, FileMode.Create, FileAccess.Write);
                             BinaryWriter writer = new BinaryWriter(fileStr);
                             writer.Write(ReceivedFile._Data, 0, ReceivedFile._Size);
@@ -215,7 +214,7 @@ namespace SocketChatandFile
                             // 보낼 파일
                             SockFileTransfer sockFileTransfer = new SockFileTransfer();
                             var o_Packet = sockFileTransfer.FileSelect(ReceivedFile._FileName);
-                            o_Server.FileSend(o_MSG, o_Packet);
+                            clsServer.FileSend(clsMSG, o_Packet);
                         }
                     }
                 }
@@ -306,13 +305,13 @@ namespace SocketChatandFile
         {
             try
             {
-                if (!b_isServer && b_isConnect)       // 클라이언트 상태 일때
+                if (!isServer && isConnect)       // 클라이언트 상태 일때
                 {
-                    o_MSG.sHeader = SocketMSG.MESSAGE_TYPE.EXIT;
-                    o_Client.OnSendData(o_MSG);
+                    clsMSG.sHeader = SocketMSG.MESSAGE_TYPE.EXIT;
+                    clsClient.OnSendData(clsMSG);
                 }
                 else
-                    o_FileServer.SockClose();
+                    clsFileServer.SockClose();
             }
             catch (Exception ex) { }
         }
@@ -346,12 +345,12 @@ namespace SocketChatandFile
                 {
                     s_Connectedlist = s_Connectedlist + lst_Connected[i];
                 }
-                o_MSG.sHeader = SocketMSG.MESSAGE_TYPE.SYSTEM;
+                clsMSG.sHeader = SocketMSG.MESSAGE_TYPE.SYSTEM;
                 string s_DATETIME = "[" + DateTime.Now.ToString("yy/MM/dd HH:mm:ss") + "] ";
-                o_MSG.sMsg = s_DATETIME + "(" + p_Msg + ")가 서버에 접속했습니다.";
-                txt_TextBox.AppendText(Environment.NewLine + o_MSG.sMsg);
+                clsMSG.sMsg = s_DATETIME + "(" + p_Msg + ")가 서버에 접속했습니다.";
+                txt_TextBox.AppendText(Environment.NewLine + clsMSG.sMsg);
 
-                o_Server.MessageSend(o_MSG);
+                clsServer.MessageSend(clsMSG);
                 CheckConnectiList();
             }));
         }
@@ -373,12 +372,12 @@ namespace SocketChatandFile
                     sConnectedNode += listBox1.Items[i - 1] + "/";
             }
 
-            o_MSG.sHeader = SocketMSG.MESSAGE_TYPE.SYSTEM;
+            clsMSG.sHeader = SocketMSG.MESSAGE_TYPE.SYSTEM;
             string s_DATETIME = "[" + DateTime.Now.ToString("yy/MM/dd HH:mm:ss") + "] ";
-            o_MSG.sMsg = s_DATETIME + "(" + p_Sender + ")가 종료 했습니다.";
-            txt_TextBox.AppendText(Environment.NewLine + o_MSG.sMsg);
+            clsMSG.sMsg = s_DATETIME + "(" + p_Sender + ")가 종료 했습니다.";
+            txt_TextBox.AppendText(Environment.NewLine + clsMSG.sMsg);
 
-            o_Server.MessageSend(o_MSG);
+            clsServer.MessageSend(clsMSG);
             CheckConnectiList();
         }));
         }
@@ -396,7 +395,7 @@ namespace SocketChatandFile
         {
             Invoke(new AppendSYSTEM_MSG(delegate
             {
-                CLIENT_IP = p_Sender;
+                clientIP = p_Sender;
                 txt_TextBox.AppendText(Environment.NewLine + p_Msg);
             }));
         }
@@ -406,7 +405,7 @@ namespace SocketChatandFile
         private delegate void Append_Node();
         private void CONNECTED_LIST(string p_Sender, string p_Msg)
         {
-            s_selfIP = p_Sender; // 자신 IP,Port
+            myIP = p_Sender; // 자신 IP,Port
             Invoke(new Append_Node(delegate
             {
                 if (listBox1.Items.Count > 0)
@@ -434,16 +433,16 @@ namespace SocketChatandFile
                 txt_Message.Focus();
                 return;
             }
-            o_MSG.sHeader = SocketMSG.MESSAGE_TYPE.MSG;
-            o_MSG.sMsg = txt_Message.Text;
+            clsMSG.sHeader = SocketMSG.MESSAGE_TYPE.MSG;
+            clsMSG.sMsg = txt_Message.Text;
 
             // 메세지 전송
             try
             {
-                if (b_isServer)     // 서버 상태
-                    o_Server.MessageSend(o_MSG);
+                if (isServer)     // 서버 상태
+                    clsServer.MessageSend(clsMSG);
                 else               // 클라이언트 상태
-                    o_Client.OnSendData(o_MSG);
+                    clsClient.OnSendData(clsMSG);
 
                 // 보낸 메세지를 창에 표시
                 txt_TextBox.AppendText(Environment.NewLine + "[나] : " + txt_Message.Text.Trim());
@@ -466,9 +465,9 @@ namespace SocketChatandFile
             {
                 try
                 {
-                    o_MSG.sHeader = SocketMSG.MESSAGE_TYPE.EXIT;
-                    o_Client.OnSendData(o_MSG);
-                    o_Client.CloseClient();
+                    clsMSG.sHeader = SocketMSG.MESSAGE_TYPE.EXIT;
+                    clsClient.OnSendData(clsMSG);
+                    clsClient.CloseClient();
                     listBox1.Items.Clear();
                     txt_TextBox.Text += Environment.NewLine + "접속을 종료 했습니다.";
                     btn_Connect.Enabled = true;
@@ -505,16 +504,16 @@ namespace SocketChatandFile
             if (sPort.Contains(' '))
                 sPort = sPort.Substring(0, sPort.IndexOf(' '));
 
-            if (s_selfIP.Equals(sIP + ":" + sPort))
+            if (myIP.Equals(sIP + ":" + sPort))
             {
                 MessageBox.Show("본인이 선택되었습니다.");
                 return;
             }
 
             // 파일 전송 정보
-            o_MSG.sHeader = SocketMSG.MESSAGE_TYPE.DATA;
-            o_MSG.sReceiver = listBox1.SelectedItem.ToString();
-            o_MSG.sReceiver = sIP + ":" + sPort;
+            clsMSG.sHeader = SocketMSG.MESSAGE_TYPE.DATA;
+            clsMSG.sReceiver = listBox1.SelectedItem.ToString();
+            clsMSG.sReceiver = sIP + ":" + sPort;
 
             // 보낼 파일
             SockFileTransfer sockFileTransfer = new SockFileTransfer();
@@ -525,16 +524,16 @@ namespace SocketChatandFile
                 return;
 
             // 파일 전송
-            if (b_isServer)
+            if (isServer)
             {   // 서버
-                o_Server.FileSend(o_MSG, o_Packet);
+                clsServer.FileSend(clsMSG, o_Packet);
             }
             else
             {   // 클라이언트
                 MultiSockets_FileTransfer.FileSocketClient fileSocketClient = new MultiSockets_FileTransfer.FileSocketClient();
-                o_Client.OnSendData(o_MSG, o_Packet);
+                clsClient.OnSendData(clsMSG, o_Packet);
                 System.Threading.Thread.Sleep(50);
-                fileSocketClient.ClientFileSend(o_MSG, o_Packet, txt_IPaddr.Text);
+                fileSocketClient.ClientFileSend(clsMSG, o_Packet, txt_IPaddr.Text);
             }
         }
 
